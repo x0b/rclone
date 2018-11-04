@@ -345,7 +345,7 @@ func (f *Fs) readMetaDataForPath(path string) (info *api.Item, resp *http.Respon
 	} else {
 		opts = rest.Opts{
 			Method: "GET",
-			Path:   "/root:/" + rest.URLPathEscape(replaceReservedChars(path)),
+			Path:   "/root:/" + withTrailingColon(rest.URLPathEscape(replaceReservedChars(path))),
 		}
 	}
 	err = f.pacer.Call(func() (bool, error) {
@@ -1276,12 +1276,12 @@ func (o *Object) setModTime(modTime time.Time) (*api.Item, error) {
 		opts = rest.Opts{
 			Method:  "PATCH",
 			RootURL: rootURL,
-			Path:    "/" + drive + "/root:/" + rest.URLPathEscape(o.srvPath()),
+			Path:    "/" + drive + "/root:/" + withTrailingColon(rest.URLPathEscape(o.srvPath())),
 		}
 	} else {
 		opts = rest.Opts{
 			Method: "PATCH",
-			Path:   "/root:/" + rest.URLPathEscape(o.srvPath()),
+			Path:   "/root:/" + withTrailingColon(rest.URLPathEscape(o.srvPath())),
 		}
 	}
 	update := api.SetFileSystemInfo{
@@ -1588,6 +1588,16 @@ func parseDirID(ID string) (string, string, string) {
 		return s[1], s[0], graphURL + "/drives"
 	}
 	return ID, "", ""
+}
+
+// Adds a ":" at the end of `remote`.
+// If `remote` ends with "/", change it to ":/"
+// A workaround for #2720
+func withTrailingColon(remote string) string {
+	if strings.HasSuffix(remote, "/") {
+		return remote[:len(remote)-1] + ":/"
+	}
+	return remote + ":"
 }
 
 // Check the interfaces are satisfied
