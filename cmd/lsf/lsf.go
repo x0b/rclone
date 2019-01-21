@@ -181,12 +181,7 @@ func Lsf(fsrc fs.Fs, out io.Writer) error {
 		}
 	}
 
-	return walk.Walk(fsrc, "", false, operations.ConfigMaxDepth(recurse), func(path string, entries fs.DirEntries, err error) error {
-		if err != nil {
-			fs.CountError(err)
-			fs.Errorf(path, "error listing: %v", err)
-			return nil
-		}
+	return walk.ListR(fsrc, "", false, operations.ConfigMaxDepth(recurse), func(entries fs.DirEntries) error {
 		for _, entry := range entries {
 			_, isDir := entry.(fs.Directory)
 			if isDir {

@@ -61,12 +61,7 @@ func ListJSON(fsrc fs.Fs, remote string, opt *ListJSONOpt, callback func(*ListJS
 			return errors.Wrap(err, "ListJSON failed to make new crypt remote")
 		}
 	}
-	err := walk.Walk(fsrc, remote, false, ConfigMaxDepth(opt.Recurse), func(dirPath string, entries fs.DirEntries, err error) error {
-		if err != nil {
-			fs.CountError(err)
-			fs.Errorf(dirPath, "error listing: %v", err)
-			return nil
-		}
+	err := walk.ListR(fsrc, remote, false, ConfigMaxDepth(opt.Recurse), func(entries fs.DirEntries) (err error) {
 		for _, entry := range entries {
 			item := ListJSONItem{
 				Path:     entry.Remote(),
