@@ -51,7 +51,7 @@ type Func func(path string, entries fs.DirEntries, err error) error
 //
 // Parent directories are always listed before their children
 //
-// This is implemented by WalkR if Config.UseRecursiveListing is true
+// This is implemented by WalkR if Config.UseUseListR is true
 // and f supports it and level > 1, or WalkN otherwise.
 //
 // If --files-from is set then a DirTree will be constructed with just
@@ -62,10 +62,105 @@ func Walk(f fs.Fs, path string, includeAll bool, maxLevel int, fn Func) error {
 	if filter.Active.HaveFilesFrom() {
 		return walkR(f, path, includeAll, maxLevel, fn, filter.Active.MakeListR(f.NewObject))
 	}
+	// FIXME should this just be maxLevel < 0 - why the maxLevel > 1
 	if (maxLevel < 0 || maxLevel > 1) && fs.Config.UseListR && f.Features().ListR != nil {
 		return walkListR(f, path, includeAll, maxLevel, fn)
 	}
 	return walkListDirSorted(f, path, includeAll, maxLevel, fn)
+}
+
+// ListR lists the directory recursively.
+//
+// If includeAll is not set it will use the filters defined.
+//
+// If maxLevel is < 0 then it will recurse indefinitely, else it will
+// only do maxLevel levels.
+//
+// It calls fn for each tranche of DirEntries read. Note that these
+// don't necessarily represent a directory
+//
+// Note that fn will not be called concurrently whereas the directory
+// listing will proceed concurrently.
+//
+// Directories are not listed in any particular order so you can't
+// rely on parents coming before children or alphabetical ordering
+//
+// This is implemented by using ListR on the backend if possible and
+// efficient, otherwise by Walk.
+//
+// NB (f, path) to be replaced by fs.Dir at some point
+func ListR(f fs.Fs, path string, includeAll bool, maxLevel int, fn fs.ListRCallback) error {
+	// FIXME disable this with --no-fast-list ??? `--disable ListR` will do it...
+
+	// Can't use ListR if...
+	if f.Features().ListR == nil || // ...no ListR
+		filter.Active.HaveFilesFrom() || // ...using --files-from
+		maxLevel >= 0 || // ...using bounded recursion
+		len(filter.Active.Opt.ExcludeFile) > 0 || // ...using --exclude-file
+		filter.Active.BoundedRecursion() { // ...filters imply bounded recursion
+		return listRwalk(f, path, includeAll, maxLevel, fn)
+	}
+	return listR(f, path, includeAll, fn)
+}
+
+// listRwalk walks the file tree for ListR using Walk
+func listRwalk(f fs.Fs, path string, includeAll bool, maxLevel int, fn fs.ListRCallback) error {
+	var listErr error
+	walkErr := Walk(f, path, includeAll, maxLevel, func(path string, entries fs.DirEntries, err error) error {
+		// Carry on listing but return the error at the end
+		if err != nil {
+			listErr = err
+			fs.CountError(err)
+			fs.Errorf(path, "error listing: %v", err)
+			return nil
+		}
+		return fn(entries)
+	})
+	if listErr != nil {
+		return listErr
+	}
+	return walkErr
+}
+
+// listR walks the file tree using ListR
+func listR(f fs.Fs, path string, includeAll bool, fn fs.ListRCallback) error {
+	doListR := f.Features().ListR
+	if doListR == nil {
+		return ErrorCantListR
+	}
+	includeDirectory := filter.Active.IncludeDirectory(f)
+	if !includeAll {
+		includeAll = filter.Active.InActive()
+	}
+	var mu sync.Mutex
+	return doListR(path, func(entries fs.DirEntries) (err error) {
+		if !includeAll {
+			filteredEntries := entries[:0]
+			for _, entry := range entries {
+				var include bool
+				switch x := entry.(type) {
+				case fs.Object:
+					include = filter.Active.IncludeObject(x)
+				case fs.Directory:
+					include, err = includeDirectory(x.Remote())
+					if err != nil {
+						return err
+					}
+				default:
+					return errors.Errorf("unknown object type %T", entry)
+				}
+				if include {
+					filteredEntries = append(filteredEntries, entry)
+				} else {
+					fs.Debugf(entry, "Excluded from sync (and deletion)")
+				}
+			}
+			entries = filteredEntries
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		return fn(entries)
+	})
 }
 
 // walkListDirSorted lists the directory.
@@ -455,7 +550,7 @@ func walkNDirTree(f fs.Fs, path string, includeAll bool, maxLevel int, listDir l
 // If maxLevel is < 0 then it will recurse indefinitely, else it will
 // only do maxLevel levels.
 //
-// This is implemented by WalkR if Config.UseRecursiveListing is true
+// This is implemented by WalkR if Config.UseUseListR is true
 // and f supports it and level > 1, or WalkN otherwise.
 //
 // If --files-from is set then a DirTree will be constructed with just
@@ -506,12 +601,9 @@ func walkR(f fs.Fs, path string, includeAll bool, maxLevel int, fn Func, listR f
 	return nil
 }
 
-// GetAll runs Walk getting all the results
+// GetAll runs ListR getting all the results
 func GetAll(f fs.Fs, path string, includeAll bool, maxLevel int) (objs []fs.Object, dirs []fs.Directory, err error) {
-	err = Walk(f, path, includeAll, maxLevel, func(dirPath string, entries fs.DirEntries, err error) error {
-		if err != nil {
-			return err
-		}
+	err = ListR(f, path, includeAll, maxLevel, func(entries fs.DirEntries) error {
 		for _, entry := range entries {
 			switch x := entry.(type) {
 			case fs.Object:
