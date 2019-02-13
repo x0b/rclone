@@ -59,7 +59,7 @@ type Func func(path string, entries fs.DirEntries, err error) error
 //
 // NB (f, path) to be replaced by fs.Dir at some point
 func Walk(f fs.Fs, path string, includeAll bool, maxLevel int, fn Func) error {
-	if filter.Active.HaveFilesFrom() {
+	if !filter.Active.Opt.FilesFromTraverse && filter.Active.HaveFilesFrom() {
 		return walkR(f, path, includeAll, maxLevel, fn, filter.Active.MakeListR(f.NewObject))
 	}
 	if (maxLevel < 0 || maxLevel > 1) && fs.Config.UseListR && f.Features().ListR != nil {
@@ -463,7 +463,7 @@ func walkNDirTree(f fs.Fs, path string, includeAll bool, maxLevel int, listDir l
 //
 // NB (f, path) to be replaced by fs.Dir at some point
 func NewDirTree(f fs.Fs, path string, includeAll bool, maxLevel int) (DirTree, error) {
-	if filter.Active.HaveFilesFrom() {
+	if !filter.Active.Opt.FilesFromTraverse && filter.Active.HaveFilesFrom() {
 		return walkRDirTree(f, path, includeAll, maxLevel, filter.Active.MakeListR(f.NewObject))
 	}
 	if ListR := f.Features().ListR; (maxLevel < 0 || maxLevel > 1) && ListR != nil {

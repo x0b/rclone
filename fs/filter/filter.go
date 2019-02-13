@@ -78,20 +78,21 @@ type FilesMap map[string]struct{}
 
 // Opt configues the filter
 type Opt struct {
-	DeleteExcluded bool
-	FilterRule     []string
-	FilterFrom     []string
-	ExcludeRule    []string
-	ExcludeFrom    []string
-	ExcludeFile    string
-	IncludeRule    []string
-	IncludeFrom    []string
-	FilesFrom      []string
-	MinAge         fs.Duration
-	MaxAge         fs.Duration
-	MinSize        fs.SizeSuffix
-	MaxSize        fs.SizeSuffix
-	IgnoreCase     bool
+	DeleteExcluded    bool
+	FilterRule        []string
+	FilterFrom        []string
+	ExcludeRule       []string
+	ExcludeFrom       []string
+	ExcludeFile       string
+	IncludeRule       []string
+	IncludeFrom       []string
+	FilesFrom         []string
+	FilesFromTraverse bool
+	MinAge            fs.Duration
+	MaxAge            fs.Duration
+	MinSize           fs.SizeSuffix
+	MaxSize           fs.SizeSuffix
+	IgnoreCase        bool
 }
 
 // DefaultOpt is the default config for the filter

@@ -374,6 +374,19 @@ In this case there will be an extra `home` directory on the remote:
     /home/user1/dir/file  → remote:home/backup/user1/dir/file
     /home/user2/stuff     → remote:home/backup/stuff
 
+### `--files-from-traverse` - Traverse the destination file system when using --file-from ###
+
+Normally `--files-from` will not traverse the destination file system,
+it will find each file individually using approximately 1 API call.
+
+However when the `--files-from` list gets long it can be more
+efficient to traverse the destination file system using the
+`--files-from` list as a set of filters. Using the
+`--files-from-traverse` flag will put rclone into this mode.
+
+Google drive in particular seems to hate the API access pattern that
+`--files-from` produces without this flag.
+
 ### `--min-size` - Don't transfer any file smaller than this ###
 
 This option controls the minimum size file which will be transferred.

@@ -25,6 +25,7 @@ func AddFlags(flagSet *pflag.FlagSet) {
 	flags.StringArrayVarP(flagSet, &Opt.IncludeRule, "include", "", nil, "Include files matching pattern")
 	flags.StringArrayVarP(flagSet, &Opt.IncludeFrom, "include-from", "", nil, "Read include patterns from file")
 	flags.StringArrayVarP(flagSet, &Opt.FilesFrom, "files-from", "", nil, "Read list of source-file names from file")
+	flags.BoolVarP(flagSet, &Opt.FilesFromTraverse, "files-from-traverse", "", false, "Traverse the destination file system when using --file-from")
 	flags.FVarP(flagSet, &Opt.MinAge, "min-age", "", "Only transfer files older than this in s or suffix ms|s|m|h|d|w|M|y")
 	flags.FVarP(flagSet, &Opt.MaxAge, "max-age", "", "Only transfer files younger than this in s or suffix ms|s|m|h|d|w|M|y")
 	flags.FVarP(flagSet, &Opt.MinSize, "min-size", "", "Only transfer files bigger than this in k or suffix b|k|M|G")
