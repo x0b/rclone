@@ -20,14 +20,11 @@ import (
 	"github.com/rclone/rclone/fs/rc/webgui"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/rclone/rclone/cmd/serve/httplib"
 	"github.com/rclone/rclone/cmd/serve/httplib/serve"
 	"github.com/rclone/rclone/fs"
-	"github.com/rclone/rclone/fs/accounting"
 	"github.com/rclone/rclone/fs/cache"
 	"github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/list"
@@ -41,9 +38,10 @@ var promHandler http.Handler
 var onlyOnceWarningAllowOrigin sync.Once
 
 func init() {
-	rcloneCollector := accounting.NewRcloneCollector()
-	prometheus.MustRegister(rcloneCollector)
-	promHandler = promhttp.Handler()
+	// DISABLED: RCX does not use prometheus
+	// rcloneCollector := accounting.NewRcloneCollector()
+	// prometheus.MustRegister(rcloneCollector)
+	// promHandler = promhttp.Handler()
 }
 
 // Start the remote control server if configured
@@ -379,9 +377,10 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request, path string) 
 		// Serve /[fs]/remote files
 		s.serveRemote(w, r, fsMatchResult[2], fsMatchResult[1])
 		return
-	case path == "metrics" && s.opt.EnableMetrics:
-		promHandler.ServeHTTP(w, r)
-		return
+	// DISABLED: RCX does not use prometheus
+	// case path == "metrics" && s.opt.EnableMetrics:
+	//	promHandler.ServeHTTP(w, r)
+	//	return
 	case path == "*" && s.opt.Serve:
 		// Serve /* as the remote listing
 		s.serveRoot(w, r)
